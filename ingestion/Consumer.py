@@ -1,9 +1,6 @@
 """
 Stream Consumer → Delta Lake Writer
-------------------------------------
-In production: Kafka consumer reads from topics and writes micro-batches to Delta Lake on S3.
-Locally:       Reads .jsonl files from raw stream dir and writes Delta tables to ./lakehouse/delta/.
-
+-----------------------------------
 Delta Lake gives us:
   - ACID transactions (safe concurrent writes)
   - Time travel (query any historical snapshot)

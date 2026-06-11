@@ -13,9 +13,10 @@ import pandas as pd
 import numpy as np
 from pathlib import Path
 from loguru import logger
+PROJECT_ROOT = Path(__file__).parent.parent
 
-DB_PATH        = Path("D:\portfolio optimization\warehouse\lending.duckdb")
-FEATURE_DIR    = Path("D:\portfolio optimization\feature_store\features")
+DB_PATH = PROJECT_ROOT / "warehouse" / "lending.duckdb"
+FEATURE_DIR = PROJECT_ROOT / "feature_storage" / "features"
 FEATURE_DIR.mkdir(parents=True, exist_ok=True)
 
 

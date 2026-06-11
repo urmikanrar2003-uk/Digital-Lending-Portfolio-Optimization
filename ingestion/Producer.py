@@ -1,10 +1,7 @@
 """
 Event Producer
 --------------
-In production: publishes to Kafka topics (loan_applications, repayments, behavioral_signals).
-Locally: writes JSON events to a queue directory simulating the stream.
-
-Swap KafkaProducer for the LocalProducer class to run without Kafka installed.
+ writes JSON events to a queue directory simulating the stream.
 """
 
 import json
@@ -121,22 +118,7 @@ class LocalProducer:
             f.write(json.dumps(event) + "\n")
 
     def flush(self):
-        pass  # no-op locally; Kafka producer uses this to drain the buffer
-
-
-# ── Kafka producer (uncomment for real Kafka, if we had a real kafka cluster for lending data) ─────────────────────────────────
-# from kafka import KafkaProducer
-# class KafkaEventProducer:
-#     def __init__(self, bootstrap_servers="localhost:9092"):
-#         self.producer = KafkaProducer(
-#             bootstrap_servers=bootstrap_servers,
-#             value_serializer=lambda v: json.dumps(v).encode("utf-8"),
-#         )
-#     def send(self, topic, event):
-#         self.producer.send(topic, value=event)
-#     def flush(self):
-#         self.producer.flush()
-
+        pass  
 
 # ── Main simulation ───────────────────────────────────────────────────────────
 
