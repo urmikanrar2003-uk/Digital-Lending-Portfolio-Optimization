@@ -38,7 +38,6 @@ The project is built on a modern **4-Layer Data Architecture**:
  ┣ 📂 training/            # Layer 3: XGBoost model training and SMOTE balancing
  ┣ 📂 registry/            # Layer 3: MLflow Champion/Challenger model registry
  ┣ 📂 mlruns/              # MLflow local SQLite backend and artifact store
- ┣ 📂 deliverables/        # Final outputs: Credit Policy Report (HTML/LaTeX) & PPTX Deck
  ┣ 📜 run_layer1.py        # Executable: Generate data & build warehouse
  ┣ 📜 run_layer2.py        # Executable: Build feature store & run data validation
  ┣ 📜 run_layer3.py        # Executable: Train models & log to MLflow
@@ -80,7 +79,7 @@ Ensure your virtual environment is active and dependencies are installed (`pip i
 
 ## 📊 Key Findings
 
-The output of this pipeline directly drives the deliverables found in the `deliverables/` folder required for submission. Key strategic findings include:
+The analytical output of this pipeline yields several critical insights for portfolio strategy. Key strategic findings include:
 
 * **Risk Segmentation (Value Destruction):** Prime segments (Grade A/B) generate massive positive risk-adjusted returns (₹97K+ per customer). Conversely, Grade D and E borrowers carry a 100% delinquency rate and actively destroy value (-₹28K per loan). Suspending them saves significant capital.
 * **Acquisition Channel Efficiency:** The Direct App channel is by far the most efficient acquisition method (CAC ₹550). The Partner channel has a massive CAC (₹5,590) but still yields positive net returns due to larger average loan sizes. Agent channels require immediate audit.
