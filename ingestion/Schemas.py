@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field
 from typing import Optional, Literal
-from datetime import datetime
+from datetime import datetime, date
 import uuid
 
 
@@ -14,7 +14,7 @@ class LoanApplicationEvent(BaseModel):
     income_monthly: float
     employment_type: Literal["salaried", "self_employed", "gig", "unemployed"]
     city_tier: Literal["tier1", "tier2", "tier3"]
-    credit_score_proxy: float        # 300–900
+    credit_score_proxy: float        # 300-900
 
     loan_amount: float
     loan_tenure_months: int
@@ -24,6 +24,14 @@ class LoanApplicationEvent(BaseModel):
 
     approval_status: Literal["approved", "rejected", "manual_review"]
     risk_grade: Literal["A", "B", "C", "D", "E"]
+
+    # --- Gap fields added for full spec compliance ---
+    # Time Dimension: loan cohort date (YYYY-MM-DD) for vintage analysis
+    origination_date: str            # ISO date string e.g. "2025-03-01"
+
+    # Acquisition: CAC in INR and time from application to decision
+    cost_of_acquisition_inr: float   # marketing + ops cost to acquire this customer
+    approval_turnaround_days: float  # calendar days from application to approval/rejection
 
 
 class RepaymentEvent(BaseModel):

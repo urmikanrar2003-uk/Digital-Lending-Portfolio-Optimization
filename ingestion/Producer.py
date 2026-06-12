@@ -7,7 +7,7 @@ Event Producer
 import json
 import random
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 from pathlib import Path
 from faker import Faker
 from loguru import logger
@@ -26,15 +26,51 @@ def _weighted_choice(choices: dict) -> str:
     return random.choices(keys, weights=weights, k=1)[0]
 
 
+# Portfolio spans 18 months: Jan-2025 through Jun-2026
+# Allows cohort/vintage analysis across at least 3 quarterly cohorts
+_COHORT_START = date(2025, 1, 1)
+_COHORT_END   = date(2026, 6, 30)
+_COHORT_DAYS  = (_COHORT_END - _COHORT_START).days
+
+
+def _random_origination_date() -> str:
+    """Random business day within the portfolio window."""
+    d = _COHORT_START + timedelta(days=random.randint(0, _COHORT_DAYS))
+    return d.isoformat()
+
+
+# Channel CAC benchmarks (INR) — app cheapest, agent/partner most expensive
+_CAC_RANGES = {
+    "app":     (300,   800),
+    "web":     (600,  1500),
+    "agent":  (2000,  5000),
+    "partner":(3000,  8000),
+}
+
+# Approval turnaround by risk grade (days) — riskier = longer review
+_TURNAROUND_GRADE = {
+    "A": (0.5, 1.0),
+    "B": (0.5, 2.0),
+    "C": (1.0, 5.0),
+    "D": (5.0, 10.0),
+    "E": (10.0, 21.0),
+}
+
+
 # ── Generators ───────────────────────────────────────────────────────────────
 
 def generate_loan_application(customer_id: str | None = None) -> LoanApplicationEvent:
-    product = _weighted_choice({"personal": 50, "bnpl": 30, "sme_working_capital": 20})
-    risk_grade = _weighted_choice({"A": 15, "B": 25, "C": 30, "D": 20, "E": 10})
-    approval_map = {"A": "approved", "B": "approved", "C": _weighted_choice(
-        {"approved": 60, "manual_review": 30, "rejected": 10}),
+    product     = _weighted_choice({"personal": 50, "bnpl": 30, "sme_working_capital": 20})
+    risk_grade  = _weighted_choice({"A": 15, "B": 25, "C": 30, "D": 20, "E": 10})
+    channel     = _weighted_choice({"app": 45, "web": 25, "agent": 20, "partner": 10})
+    approval_map = {
+        "A": "approved",
+        "B": "approved",
+        "C": _weighted_choice({"approved": 60, "manual_review": 30, "rejected": 10}),
         "D": _weighted_choice({"manual_review": 50, "rejected": 40, "approved": 10}),
-        "E": "rejected"}
+        "E": "rejected",
+    }
+    approval_status = approval_map[risk_grade]
 
     loan_ranges = {
         "personal": (10_000, 500_000),
@@ -42,6 +78,15 @@ def generate_loan_application(customer_id: str | None = None) -> LoanApplication
         "sme_working_capital": (100_000, 2_000_000),
     }
     lo, hi = loan_ranges[product]
+
+    # Turnaround: rejected/manual_review take longer than clean approvals
+    base_lo, base_hi = _TURNAROUND_GRADE[risk_grade]
+    if approval_status == "rejected":
+        turnaround = round(random.uniform(base_hi, base_hi * 1.5), 1)
+    elif approval_status == "manual_review":
+        turnaround = round(random.uniform(base_lo * 1.5, base_hi * 1.3), 1)
+    else:
+        turnaround = round(random.uniform(base_lo, base_hi), 1)
 
     return LoanApplicationEvent(
         customer_id=customer_id or str(uuid.uuid4()),
@@ -55,25 +100,42 @@ def generate_loan_application(customer_id: str | None = None) -> LoanApplication
         loan_tenure_months=random.choice([3, 6, 12, 18, 24, 36]),
         loan_product=product,
         interest_rate=round(random.uniform(10.5, 36.0), 2),
-        origination_channel=_weighted_choice(
-            {"app": 45, "web": 25, "agent": 20, "partner": 10}),
-        approval_status=approval_map[risk_grade],
+        origination_channel=channel,
+        approval_status=approval_status,
         risk_grade=risk_grade,
+        # --- New fields ---
+        origination_date=_random_origination_date(),
+        cost_of_acquisition_inr=round(random.uniform(*_CAC_RANGES[channel]), 2),
+        approval_turnaround_days=turnaround,
     )
 
 
 def generate_repayment(customer_id: str, loan_id: str,
                        risk_grade: str) -> RepaymentEvent:
+    # Realistic DPD distributions WITH overlap between grades.
+    # A/B customers occasionally miss payments; D/E customers sometimes pay on time.
     dpd_dist = {
-        "A": lambda: 0,
-        "B": lambda: random.choices([0, random.randint(1, 5)], [90, 10])[0],
-        "C": lambda: random.choices([0, random.randint(1, 30)], [70, 30])[0],
-        "D": lambda: random.choices([0, random.randint(1, 60)], [50, 50])[0],
-        "E": lambda: random.choices([0, random.randint(30, 90)], [30, 70])[0],
+        "A": lambda: random.choices(
+            [0, random.randint(1, 10), random.randint(11, 30)],
+            [88, 9, 3])[0],
+        "B": lambda: random.choices(
+            [0, random.randint(1, 15), random.randint(16, 45)],
+            [75, 17, 8])[0],
+        "C": lambda: random.choices(
+            [0, random.randint(1, 30), random.randint(31, 60)],
+            [55, 28, 17])[0],
+        "D": lambda: random.choices(
+            [0, random.randint(1, 45), random.randint(46, 90)],
+            [35, 35, 30])[0],
+        "E": lambda: random.choices(
+            [0, random.randint(1, 30), random.randint(31, 90)],
+            [22, 28, 50])[0],
     }
     dpd = dpd_dist[risk_grade]()
     emi = round(random.uniform(2_000, 25_000), 2)
-    is_partial = random.random() < (0.05 if risk_grade in "AB" else 0.25)
+    # Partial payment rate varies by grade but with noise
+    partial_prob = {"A": 0.05, "B": 0.12, "C": 0.22, "D": 0.35, "E": 0.48}
+    is_partial = random.random() < partial_prob[risk_grade]
     paid = round(emi * random.uniform(0.4, 0.9), 2) if is_partial else emi
 
     return RepaymentEvent(
@@ -91,17 +153,32 @@ def generate_repayment(customer_id: str, loan_id: str,
 
 def generate_behavioral_signal(customer_id: str,
                                 risk_grade: str) -> BehavioralEvent:
-    high_risk = risk_grade in ("D", "E")
+    # Behavioral signals overlap across grades — financial stress is noisy.
+    # D/E can have stable months; A/B can have shock events.
+    grade_params = {
+        #            bal_lo  bal_hi   vol_lo vol_hi  shocks_lo shocks_hi  cfr_lo cfr_hi  missed_lo missed_hi
+        "A": dict(bal=(5_000, 50_000),  vol=(200,  5_000),  shk=(0, 1), cfr=(1.1, 1.8), msd=(0, 1)),
+        "B": dict(bal=(3_000, 40_000),  vol=(500,  8_000),  shk=(0, 2), cfr=(0.95,1.5), msd=(0, 1)),
+        "C": dict(bal=(2_000, 30_000),  vol=(1_000,14_000), shk=(0, 4), cfr=(0.80,1.3), msd=(0, 2)),
+        "D": dict(bal=(1_000, 20_000),  vol=(2_000,20_000), shk=(1, 6), cfr=(0.60,1.1), msd=(0, 4)),
+        "E": dict(bal=(500,  15_000),   vol=(3_000,25_000), shk=(2, 8), cfr=(0.50,1.0), msd=(1, 5)),
+    }
+    p = grade_params[risk_grade]
+    # Add 15% random noise — borrow parameters from adjacent grade occasionally
+    if random.random() < 0.15:
+        adj = {"A": "B", "B": "C", "C": "D", "D": "E", "E": "D"}
+        p = grade_params[adj[risk_grade]]
+
     return BehavioralEvent(
         customer_id=customer_id,
-        avg_monthly_balance=round(random.uniform(500, 50_000), 2),
-        balance_volatility=round(random.uniform(5_000 if high_risk else 500,
-                                                 30_000 if high_risk else 8_000), 2),
-        num_spending_shocks=random.randint(2 if high_risk else 0, 8 if high_risk else 2),
-        cash_flow_ratio=round(random.uniform(0.5 if high_risk else 0.9, 1.5), 3),
+        avg_monthly_balance=round(random.uniform(*p["bal"]), 2),
+        balance_volatility=round(random.uniform(*p["vol"]), 2),
+        num_spending_shocks=random.randint(*p["shk"]),
+        cash_flow_ratio=round(random.uniform(*p["cfr"]), 3),
         app_login_frequency=random.randint(1, 30),
-        missed_bill_payments=random.randint(1 if high_risk else 0, 5 if high_risk else 1),
+        missed_bill_payments=random.randint(*p["msd"]),
     )
+
 
 
 # ── Local producer (no Kafka needed) ─────────────────────────────────────────

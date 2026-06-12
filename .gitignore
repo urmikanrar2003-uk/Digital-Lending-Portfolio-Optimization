@@ -12,6 +12,12 @@ lakehouse/
 # DuckDB database
 warehouse/*.duckdb
 
+# MLflow tracking
+lending_layer3/
+
+# Output deliverables
+deliverables/
+
 # VS Code
 .vscode/
 

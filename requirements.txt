@@ -1,11 +1,26 @@
-fastavro==1.9.4
-pandas==2.1.4
-pyarrow==14.0.2
+# Data Processing & Storage
+pandas==2.3.3
+numpy==2.4.6
 deltalake==0.15.1
-faker==22.0.0
-python-dotenv==1.0.0
-sqlalchemy==2.0.25
 duckdb==1.5.3
+
+# Modeling & ML
+scikit-learn==1.9.0
+imbalanced-learn==0.14.2
+xgboost==3.2.0
+mlflow==3.13.0
+shap==0.51.0
+
+# Quality & Validation
+great_expectations==1.18.0
+
+# Synthetic Data Generation
+faker==22.0.0
+pydantic==2.13.4
+
+# Reporting & Visualization
+matplotlib==3.10.9
+python-pptx==1.0.2
+
+# Utilities
 loguru==0.7.2
-pydantic==2.5.3
-great_expectations==0.15.35
