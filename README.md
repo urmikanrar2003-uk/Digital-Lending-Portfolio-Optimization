@@ -42,6 +42,8 @@ The project is built on a modern **4-Layer Data Architecture**:
  ┣ 📜 run_layer2.py        # Executable: Build feature store & run data validation
  ┣ 📜 run_layer3.py        # Executable: Train models & log to MLflow
  ┣ 📜 launch_mlflow.py     # Executable: Windows-safe MLflow UI launcher
+ ┣ 📜 view_findings.py     # Executable: Query and display portfolio analytics findings
+ ┣ 📜 test_policy.py       # Executable: Test portfolio impact of new risk policies
  ┗ 📜 requirements.txt     # Python dependencies
 ```
 
@@ -74,6 +76,18 @@ Ensure your virtual environment is active and dependencies are installed (`pip i
    python launch_mlflow.py
    ```
    *Launches the MLflow UI in single-process mode (bypassing a known Windows multiprocessing socket bug). Open `http://127.0.0.1:5000` in your browser.*
+
+5. **View Portfolio Insights:**
+   ```bash
+   python view_findings.py
+   ```
+   *Displays portfolio segmentation, acquisition channel economics, and cohort analysis directly from the data warehouse.*
+
+6. **Test Risk Policy Impact:**
+   ```bash
+   python test_policy.py
+   ```
+   *Compares current portfolio KPIs against a simulated policy that excludes high-risk grades and short tenures.*
 
 ---
 
